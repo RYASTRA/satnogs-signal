@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from satnogs_signal.shared.satnogs_api import Observation
 
 
-def dedup_by_image_hash(records: list) -> list:
+def dedup_by_image_hash(records: list[dict]) -> list[dict]:
     seen: set = set()
     out: list = []
     for r in records:
@@ -34,7 +34,7 @@ class SplitConfig:
     val_fraction_by_time: float = 0.2
 
 
-def partition(observations: list, cfg: SplitConfig) -> dict:
+def partition(observations: list[Observation], cfg: SplitConfig) -> dict[str, list[Observation]]:
     test, pool = [], []
     for o in observations:
         if o.norad_cat_id == cfg.heldout_satellite_norad or o.ground_station in cfg.heldout_station_ids:
