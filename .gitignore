@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# local dataset build output (large; pushed to HF Hub instead)
+_dataset_build/
