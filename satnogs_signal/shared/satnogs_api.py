@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Iterator, Optional
+from typing import TYPE_CHECKING, Iterator, Optional
+
+if TYPE_CHECKING:
+    import requests
 
 BASE_URL = "https://network.satnogs.org/api"
 
@@ -40,7 +43,11 @@ WATERFALL_STATUS_FILTER = {"without-signal": 0, "with-signal": 1}
 _RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
-def _get_with_backoff(session, url, params, max_retries, backoff_base, sleep):
+def _get_with_backoff(
+    session, url, params, max_retries, backoff_base, sleep
+) -> "requests.Response":
+    if max_retries < 1:
+        raise ValueError("max_retries must be >= 1")
     last = None
     for attempt in range(max_retries):
         last = session.get(url, params=params, timeout=30)
@@ -70,7 +77,7 @@ def iter_observations(
 
         session = requests.Session()
 
-    params = {"format": "json"}
+    params: dict[str, object] = {"format": "json"}
     if norad_cat_id is not None:
         params["norad_cat_id"] = norad_cat_id
     if waterfall_status is not None:
