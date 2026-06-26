@@ -20,10 +20,11 @@ from collections import Counter
 import requests
 
 from satnogs_signal.shared.satnogs_api import iter_observations, Observation
+from satnogs_signal.shared.config import hf_token, satnogs_token
 from satnogs_signal.data.build_dataset import build_records, to_dataset_dict, push, REPO_ID
 from satnogs_signal.data.splits import SplitConfig
 
-TOKEN = os.environ.get("satnogs_network_api_key") or None
+TOKEN = satnogs_token()
 THROTTLE = 1.0
 OUT = "_dataset_build"  # gitignored local save dir
 CACHE_DIR = os.path.join(OUT, "cache")  # per-(satellite,status) listing cache (resumable)
@@ -117,8 +118,13 @@ def main() -> None:
     print(f"\nsaved DatasetDict to ./{OUT}/")
 
     if DO_PUSH:
+        hf = hf_token()
+        if not hf:
+            print("ERROR: no Hugging Face token found in env (huggingface_access_token / "
+                  "HF_TOKEN). Add it to .env and re-run with --push.", file=sys.stderr)
+            sys.exit(1)
         print(f"pushing to the Hub: {REPO_ID} (private)...")
-        push(dd)
+        push(dd, token=hf)
         print("pushed.")
     else:
         print("(not pushed — re-run with --push once HF auth is set up)")
