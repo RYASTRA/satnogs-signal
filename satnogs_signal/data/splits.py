@@ -8,17 +8,21 @@ frames cannot straddle splits.
 """
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass, field
 
 from satnogs_signal.shared.satnogs_api import Observation
 
 
 def dedup_by_image_hash(records: list[dict]) -> list[dict]:
+    """Drop later records whose precomputed ``image_hash`` was already seen.
+
+    Order-preserving (first occurrence wins). Hashing happens upstream in
+    ``build_records`` so the raw image bytes never have to be retained in memory.
+    """
     seen: set = set()
     out: list = []
     for r in records:
-        h = hashlib.sha256(r["image_bytes"]).hexdigest()
+        h = r["image_hash"]
         if h in seen:
             continue
         seen.add(h)

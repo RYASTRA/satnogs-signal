@@ -1,6 +1,7 @@
 """Assemble the gold waterfall dataset and push it to the HF Hub."""
 from __future__ import annotations
 
+import hashlib
 from typing import Callable
 
 from datasets import ClassLabel, Dataset, DatasetDict, Features, Image as HFImage, Value
@@ -31,7 +32,9 @@ def build_records(observations, fetch_bytes: Callable[[str], bytes]) -> list:
                 "timestamp": o.start,
                 "label": label_to_int(o.waterfall_status),
                 "image": image,
-                "image_bytes": raw,
+                # Hash now and discard the raw bytes: dedup only needs the digest, so we
+                # keep just the small 224x224 image + hash, not ~1-2 MB of raw PNG per obs.
+                "image_hash": hashlib.sha256(raw).hexdigest(),
             }
         )
     return records
