@@ -28,4 +28,5 @@ include = ["satnogs_signal*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"
 markers = ["slow: model training / network tests, deselect with -m 'not slow'"]
