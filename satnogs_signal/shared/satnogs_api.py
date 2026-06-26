@@ -43,8 +43,26 @@ WATERFALL_STATUS_FILTER = {"without-signal": 0, "with-signal": 1}
 _RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
+def _retry_after_seconds(resp, default: float, cap: float) -> float:
+    """Honor the server's Retry-After header (in seconds) if present, capped; else default."""
+    ra = resp.headers.get("Retry-After") if hasattr(resp, "headers") else None
+    if ra is not None:
+        try:
+            return min(float(ra), cap)
+        except (TypeError, ValueError):
+            return default
+    return default
+
+
 def _get_with_backoff(
-    session, url, params, max_retries, backoff_base, sleep, headers=None
+    session,
+    url,
+    params,
+    max_retries,
+    backoff_base,
+    sleep,
+    headers=None,
+    max_retry_after: float = 1800.0,
 ) -> "requests.Response":
     if max_retries < 1:
         raise ValueError("max_retries must be >= 1")
@@ -53,7 +71,10 @@ def _get_with_backoff(
         if resp.status_code == 200:
             return resp
         if resp.status_code in _RETRY_STATUS and attempt < max_retries - 1:
-            sleep(backoff_base * (2 ** attempt))
+            wait = _retry_after_seconds(
+                resp, default=backoff_base * (2 ** attempt), cap=max_retry_after
+            )
+            sleep(wait)
             continue
         resp.raise_for_status()
         return resp

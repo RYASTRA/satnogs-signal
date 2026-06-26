@@ -11,19 +11,22 @@ Pushing to the Hub is a SEPARATE explicit step (pass --push, requires HF auth).
 Setup:  set -a; source .env; set +a
 Usage:  python scripts/build_and_push.py [cap_per_class] [--push]
 """
+import dataclasses
+import json
 import os
 import sys
 from collections import Counter
 
 import requests
 
-from satnogs_signal.shared.satnogs_api import iter_observations
+from satnogs_signal.shared.satnogs_api import iter_observations, Observation
 from satnogs_signal.data.build_dataset import build_records, to_dataset_dict, push, REPO_ID
 from satnogs_signal.data.splits import SplitConfig
 
 TOKEN = os.environ.get("satnogs_network_api_key") or None
 THROTTLE = 1.0
 OUT = "_dataset_build"  # gitignored local save dir
+CACHE_DIR = os.path.join(OUT, "cache")  # per-(satellite,status) listing cache (resumable)
 
 TRAIN = {63235: "OTP-2", 57175: "CUBEBEL-2", 68506: "AEPEX", 60246: "CatSat"}
 HELDOUT_SAT = {69015: "FrontierSat"}
@@ -42,18 +45,29 @@ def fetch_bytes(url: str) -> bytes:
 
 
 def collect(norad: int, name: str) -> list:
+    """List gold obs for a satellite, caching each (norad, status) so a rate-limit
+    cooldown only pauses progress — a re-run loads cached listings and resumes."""
     obs = []
     pages = (CAP + 24) // 25
     for status in ("with-signal", "without-signal"):
-        got = list(
-            iter_observations(
-                norad_cat_id=norad, waterfall_status=status, session=session,
-                max_pages=pages, token=TOKEN, request_interval=THROTTLE,
-                max_retries=8, backoff_base=2.0,
-            )
-        )[:CAP]
+        cache_file = os.path.join(CACHE_DIR, f"{norad}_{status}.json")
+        if os.path.exists(cache_file):
+            with open(cache_file) as f:
+                got = [Observation(**d) for d in json.load(f)]
+            print(f"  cached {len(got):>4} {status:<14} for {name} ({norad})", file=sys.stderr)
+        else:
+            got = list(
+                iter_observations(
+                    norad_cat_id=norad, waterfall_status=status, session=session,
+                    max_pages=pages, token=TOKEN, request_interval=THROTTLE,
+                    max_retries=8, backoff_base=2.0,
+                )
+            )[:CAP]
+            os.makedirs(CACHE_DIR, exist_ok=True)
+            with open(cache_file, "w") as f:
+                json.dump([dataclasses.asdict(o) for o in got], f)
+            print(f"  listed {len(got):>4} {status:<14} for {name} ({norad})", file=sys.stderr)
         obs.extend(got)
-        print(f"  listed {len(got):>4} {status:<14} for {name} ({norad})", file=sys.stderr)
     return obs
 
 
