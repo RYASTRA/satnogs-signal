@@ -16,7 +16,9 @@ _LABEL_NAMES = ["without-signal", "with-signal"]  # index == integer label
 def build_records(observations, fetch_bytes: Callable[[str], bytes]) -> list:
     records = []
     for o in observations:
-        if not is_gold(o.waterfall_status) or not o.waterfall:
+        # Skip non-gold, image-less, OR station-less observations: a null station
+        # can't participate in the station-based split and breaks the int64 schema.
+        if not is_gold(o.waterfall_status) or not o.waterfall or o.ground_station is None:
             continue
         raw = fetch_bytes(o.waterfall)
         image = preprocess(load_image(raw))

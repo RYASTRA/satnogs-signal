@@ -35,8 +35,16 @@ class SplitConfig:
 
 
 def partition(observations: list[Observation], cfg: SplitConfig) -> dict[str, list[Observation]]:
+    allowed = set(cfg.train_norads) | {cfg.heldout_satellite_norad}
     test, pool = [], []
     for o in observations:
+        if o.norad_cat_id not in allowed:
+            raise ValueError(
+                f"observation {o.id} has norad {o.norad_cat_id}, which is neither a "
+                f"train satellite ({cfg.train_norads}) nor the held-out satellite "
+                f"({cfg.heldout_satellite_norad}); refusing to place an unexpected "
+                f"satellite into a split"
+            )
         if o.norad_cat_id == cfg.heldout_satellite_norad or o.ground_station in cfg.heldout_station_ids:
             test.append(o)
         else:
