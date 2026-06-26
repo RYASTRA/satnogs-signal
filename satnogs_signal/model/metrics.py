@@ -19,3 +19,21 @@ def precision_at_k(labels, scores, k: int) -> float:
     order = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
     top = [labels[i] for i in order]
     return sum(top) / len(top)
+
+
+from collections import defaultdict
+
+
+def sliced_report(labels, scores, groups) -> dict:
+    by_group = defaultdict(list)
+    for i, g in enumerate(groups):
+        by_group[g].append(i)
+    out = {}
+    for g, ids in by_group.items():
+        gl = [labels[i] for i in ids]
+        gs = [scores[i] for i in ids]
+        out[g] = {
+            "n": len(ids),
+            "roc_auc": roc_auc(gl, gs) if len(set(gl)) > 1 else None,
+        }
+    return out
