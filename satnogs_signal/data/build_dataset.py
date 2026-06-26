@@ -94,5 +94,5 @@ def to_dataset_dict(records: list, cfg: SplitConfig) -> DatasetDict:
     return DatasetDict({name: _make(parts[name]) for name in ("train", "val", "test")})
 
 
-def push(dataset_dict: DatasetDict, repo_id: str = REPO_ID, token=None):  # pragma: no cover
-    dataset_dict.push_to_hub(repo_id, private=True, token=token)
+def push(dataset_dict: DatasetDict, repo_id: str = REPO_ID):  # pragma: no cover
+    dataset_dict.push_to_hub(repo_id, private=True)
