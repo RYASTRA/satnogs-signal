@@ -48,17 +48,16 @@ def _get_with_backoff(
 ) -> "requests.Response":
     if max_retries < 1:
         raise ValueError("max_retries must be >= 1")
-    last = None
     for attempt in range(max_retries):
-        last = session.get(url, params=params, timeout=30)
-        if last.status_code == 200:
-            return last
-        if last.status_code in _RETRY_STATUS and attempt < max_retries - 1:
+        resp = session.get(url, params=params, timeout=30)
+        if resp.status_code == 200:
+            return resp
+        if resp.status_code in _RETRY_STATUS and attempt < max_retries - 1:
             sleep(backoff_base * (2 ** attempt))
             continue
-        last.raise_for_status()
-    last.raise_for_status()
-    return last  # pragma: no cover
+        resp.raise_for_status()
+        return resp
+    raise RuntimeError("unreachable: loop always returns or raises")
 
 
 def iter_observations(
@@ -77,7 +76,7 @@ def iter_observations(
 
         session = requests.Session()
 
-    params: dict[str, object] = {"format": "json"}
+    params: dict[str, object] | None = {"format": "json"}
     if norad_cat_id is not None:
         params["norad_cat_id"] = norad_cat_id
     if waterfall_status is not None:
