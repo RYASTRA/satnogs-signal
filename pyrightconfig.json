@@ -1,5 +1,5 @@
 {
   "venvPath": ".",
   "venv": ".venv",
-  "include": ["satnogs_signal", "tests"]
+  "include": ["satnogs_signal", "tests", "scripts"]
 }
