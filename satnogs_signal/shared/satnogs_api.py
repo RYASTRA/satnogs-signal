@@ -44,12 +44,12 @@ _RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
 def _get_with_backoff(
-    session, url, params, max_retries, backoff_base, sleep
+    session, url, params, max_retries, backoff_base, sleep, headers=None
 ) -> "requests.Response":
     if max_retries < 1:
         raise ValueError("max_retries must be >= 1")
     for attempt in range(max_retries):
-        resp = session.get(url, params=params, timeout=30)
+        resp = session.get(url, params=params, headers=headers, timeout=30)
         if resp.status_code == 200:
             return resp
         if resp.status_code in _RETRY_STATUS and attempt < max_retries - 1:
@@ -69,12 +69,23 @@ def iter_observations(
     max_retries: int = 5,
     backoff_base: float = 1.0,
     sleep=time.sleep,
+    token: Optional[str] = None,
+    request_interval: float = 0.0,
 ) -> Iterator[Observation]:
-    """Yield gold/any observations, following cursor pagination politely."""
+    """Yield gold/any observations, following cursor pagination politely.
+
+    Pass ``token`` to authenticate (sends ``Authorization: Token <token>``); the
+    SatNOGS Network API grants authenticated callers a higher rate limit. Pass
+    ``request_interval`` to pause that many seconds before each page fetch
+    (proactive throttling), so we stay under the limit instead of only backing
+    off after a 429.
+    """
     if session is None:
         import requests
 
         session = requests.Session()
+
+    headers = {"Authorization": f"Token {token}"} if token else None
 
     params: dict[str, object] | None = {"format": "json"}
     if norad_cat_id is not None:
@@ -85,7 +96,11 @@ def iter_observations(
     url = f"{BASE_URL}/observations/"
     pages = 0
     while url:
-        resp = _get_with_backoff(session, url, params, max_retries, backoff_base, sleep)
+        if request_interval:
+            sleep(request_interval)
+        resp = _get_with_backoff(
+            session, url, params, max_retries, backoff_base, sleep, headers
+        )
         params = None  # 'next' Link is an absolute URL carrying its own cursor
         for item in resp.json():
             yield parse_observation(item)
