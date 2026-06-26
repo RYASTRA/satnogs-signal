@@ -1,0 +1,25 @@
+[project]
+name = "satnogs-signal"
+version = "0.1.0"
+description = "Signal-vs-noise classification for SatNOGS waterfall observations"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+    "Pillow>=10.0",
+    "datasets>=2.18",
+    "huggingface_hub>=0.23",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["satnogs_signal*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
