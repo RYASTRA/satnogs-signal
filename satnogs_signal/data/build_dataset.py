@@ -54,6 +54,10 @@ def _obs_index(records):
 
 
 def to_dataset_dict(records: list, cfg: SplitConfig) -> DatasetDict:
+    # Global exact-image dedup BEFORE partition: guarantees a byte-identical image
+    # can never land in two splits (the strongest leakage guard). Per-split dedup
+    # would NOT catch a cross-split duplicate, so it must happen here, before splitting.
+    records = dedup_by_image_hash(records)
     by_id = _obs_index(records)
 
     # Rebuild Observation-like objects only need the split keys; reuse the record dicts.
@@ -68,10 +72,7 @@ def to_dataset_dict(records: list, cfg: SplitConfig) -> DatasetDict:
     feats = _features()
 
     def _make(split_obs):
-        # Dedup within each split so near-identical frames don't inflate a single split,
-        # and cross-split leakage is handled by the station/satellite partition logic.
-        split_records = dedup_by_image_hash([by_id[o.id] for o in split_obs])
-        rows = split_records
+        rows = [by_id[o.id] for o in split_obs]
         return Dataset.from_dict(
             {
                 "image": [r["image"] for r in rows],
