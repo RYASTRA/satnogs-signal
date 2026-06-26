@@ -219,3 +219,6 @@ __marimo__/
 
 # local dataset build output (large; pushed to HF Hub instead)
 _dataset_build/
+
+# local trained model output (pushed to HF Hub instead)
+_model/
