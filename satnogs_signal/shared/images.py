@@ -13,4 +13,4 @@ def load_image(data: bytes) -> Image.Image:
 
 
 def preprocess(img: Image.Image, size=INPUT_SIZE) -> Image.Image:
-    return img.convert("RGB").resize(size)
+    return img.convert("RGB").resize(size, Image.Resampling.LANCZOS)
