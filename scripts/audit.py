@@ -20,7 +20,13 @@ from satnogs_signal.data.audit import tally_candidates
 
 PAGES = int(sys.argv[1]) if len(sys.argv) > 1 else 12  # 25 obs per page
 THROTTLE_S = 1.0
-TOKEN = os.environ.get("SATNOGS_API_TOKEN") or None
+# Accept the SatNOGS Network token under a few common env-var names.
+TOKEN = (
+    os.environ.get("satnogs_network_api_key")
+    or os.environ.get("SATNOGS_NETWORK_API_KEY")
+    or os.environ.get("SATNOGS_API_TOKEN")
+    or None
+)
 
 
 def main() -> None:
