@@ -14,6 +14,7 @@ dependencies = [
     "transformers>=4.40",
     "accelerate>=1.1.0",
     "scikit-learn>=1.4",
+    "gradio>=4.0",
 ]
 
 [project.optional-dependencies]

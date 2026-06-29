@@ -45,8 +45,21 @@ def poll(
         if not images:
             continue
 
-        probs = score_fn(images)
+        try:
+            probs = list(score_fn(images))
+        except Exception:
+            # batch scoring failed -> score one at a time so a single bad image
+            # can't drop the whole satellite's batch; failures become None and are skipped.
+            probs = []
+            for img in images:
+                try:
+                    probs.append(score_fn([img])[0])
+                except Exception:
+                    probs.append(None)
+
         for o, p in zip(kept, probs):
+            if p is None:
+                continue  # this observation's scoring failed; skip it, keep the rest
             store.upsert_prediction(
                 conn,
                 {
