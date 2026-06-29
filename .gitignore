@@ -222,3 +222,6 @@ _dataset_build/
 
 # local trained model output (pushed to HF Hub instead)
 _model/
+
+# triage service local prediction DB (scored data; not tracked)
+triage.db

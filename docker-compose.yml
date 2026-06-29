@@ -13,6 +13,8 @@ services:
     working_dir: /app
     volumes:
       - .:/app          # live code + read/write _dataset_build/ and _model/ on the host
+    ports:
+      - "7860:7860"   # Gradio dashboard (docker compose run --rm --service-ports app python app.py)
     env_file:
       - path: .env      # SatNOGS + HF tokens; optional so a fresh clone doesn't error
         required: false

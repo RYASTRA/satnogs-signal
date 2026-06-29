@@ -71,3 +71,14 @@ docker compose run --rm app python scripts/train_and_eval.py _dataset_build   # 
 API tokens go in a gitignored `.env` (copy `.env.example`); compose loads it automatically.
 Note: Docker on macOS can't reach Apple's MPS GPU, so in-container training is CPU-only
 (fine for this model size).
+
+### The triage service (read-only)
+
+```bash
+docker compose run --rm app python scripts/run_poller.py        # score unvetted obs -> triage.db
+docker compose run --rm --service-ports app python app.py       # serve the dashboard at http://localhost:7860
+```
+
+The poller pulls *unvetted* observations for the model's satellites, scores them, and stores
+the ranked predictions; the dashboard shows a **triage queue** (most-likely-signal first, with a
+link to vet each on SatNOGS) and a **monitoring** view. It never writes back to SatNOGS.
