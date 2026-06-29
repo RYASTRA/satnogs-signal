@@ -1,0 +1,18 @@
+# Run everything through the container — no host virtualenv.
+#   docker compose build
+#   docker compose run --rm app pytest -q
+#   docker compose run --rm app python scripts/audit.py
+#   docker compose run --rm app python scripts/build_and_push.py 120
+#   docker compose run --rm app python scripts/train_and_eval.py _dataset_build
+# Note: Docker on macOS has no access to Apple MPS, so training in-container is CPU-only
+# (fine for ResNet-18 on this dataset).
+services:
+  app:
+    build: .
+    image: satnogs-signal
+    working_dir: /app
+    volumes:
+      - .:/app          # live code + read/write _dataset_build/ and _model/ on the host
+    env_file:
+      - path: .env      # SatNOGS + HF tokens; optional so a fresh clone doesn't error
+        required: false

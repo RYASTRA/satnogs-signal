@@ -1,0 +1,15 @@
+# Keep the build context (and image) small; never bake secrets or large outputs in.
+.git
+.gitignore
+.venv
+venv/
+**/__pycache__/
+*.pyc
+*.egg-info/
+.superpowers/
+_dataset_build/
+_model/
+.env
+.env.example
+.DS_Store
+docs/

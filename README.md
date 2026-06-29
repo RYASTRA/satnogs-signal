@@ -53,3 +53,19 @@ so real-world performance on faint signals will be lower than these numbers.*
 
 📄 **Background research:** [docs/prior-art.md](docs/prior-art.md) — a cited survey of
 prior efforts, how SatNOGS vets today, the labeling trap, and what it means for scope.
+
+## Running it (Docker — no virtualenv)
+
+Everything runs in a container; there's no local Python environment to manage.
+
+```bash
+docker compose build                                    # build the image (installs deps)
+docker compose run --rm app pytest -q                   # run the test suite
+docker compose run --rm app python scripts/audit.py     # audit candidate satellites
+docker compose run --rm app python scripts/build_and_push.py 120   # build the dataset
+docker compose run --rm app python scripts/train_and_eval.py _dataset_build   # train + eval
+```
+
+API tokens go in a gitignored `.env` (copy `.env.example`); compose loads it automatically.
+Note: Docker on macOS can't reach Apple's MPS GPU, so in-container training is CPU-only
+(fine for this model size).
