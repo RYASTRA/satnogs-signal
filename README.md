@@ -38,8 +38,10 @@ satellite* (436 observations):
 | precision@10 | **1.000** | 0.600 |
 
 - **Generalizes to an unseen satellite** — FrontierSat, never seen in training (240 obs): ROC-AUC **0.772**.
-- **precision@10 = 1.000** — the model's most-confident signal calls are all correct, so the
-  *top of the triage queue is trustworthy* (the point: this is a triage aid, not an auto-vetter).
+- **precision@10 = 1.000** *on the gold test set* — on held-out **vetted** passes the
+  most-confident calls are all correct. On the raw unvetted firehose the top of the queue is a
+  strong prioritizer but still needs a human glance (see *Expected accuracy on live data* below) —
+  this is a triage aid, not an auto-vetter.
 - Beats the label-free classical baseline (central-frequency energy) by a wide margin — the ship bar.
 - Inputs are cropped to the spectrogram (colorbar/axes removed), which re-centers the signal — by
   mode: GFSK **0.93**, FSK **0.92**, FSK AX.100 Mode 5 **0.79**.
@@ -52,6 +54,28 @@ satellite* (436 observations):
 *Trained on 4 narrowband FSK/GFSK telemetry satellites (OTP-2, CUBEBEL-2, AEPEX, CatSat) with
 FrontierSat held out. Caveat: gold labels skew toward clearer passes than the unvetted firehose,
 so real-world performance on faint signals will be lower than these numbers.*
+
+### Expected accuracy on live data
+
+The numbers above are measured on *human-vetted* passes. To check behavior on the **raw
+unvetted firehose**, the triage service was run live against the SatNOGS Network API and scored
+**56 fresh observations** it had never seen. Independent reviewers then classified the queue's
+extremes — the 6 highest- and 6 lowest-scored waterfalls — **blind** (without seeing the model's
+score):
+
+| Queue segment | Model call | Blind reviewers agreed |
+|---------------|------------|------------------------|
+| **Bottom** — P(signal) < 0.02 | "noise" | **6 / 6** — zero false negatives |
+| **Top** — P(signal) ≥ 0.995 | "signal" | **4 / 6** — two confident false positives |
+
+In practice, then: the model is **excellent at filtering out empty observations** (the bulk of
+the firehose), while the **top of the queue still needs a human glance** — roughly a third of
+even its most-confident signal calls were false positives on this live sample. Use it to
+*prioritize* vetting, not to auto-accept.
+
+*This is a 12-observation blind spot-check of the queue extremes (one reviewer per image), not a
+full metric — it illustrates the real-world behavior the sampling-bias caveat predicts, on data
+the model had never seen.*
 
 📄 **Background research:** [docs/prior-art.md](docs/prior-art.md) — a cited survey of
 prior efforts, how SatNOGS vets today, the labeling trap, and what it means for scope.
