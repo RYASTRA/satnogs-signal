@@ -14,6 +14,17 @@ from transformers import (
 _LABELS = ["without-signal", "with-signal"]
 
 
+def _resolve_size(processor) -> int:
+    """Resolve the model's expected square input size from the image-processor config.
+    Handles both {"shortest_edge": N} and {"height": H, "width": W} forms."""
+    size_info = processor.size
+    if "shortest_edge" in size_info:
+        return size_info["shortest_edge"]
+    if "height" in size_info:
+        return size_info["height"]
+    return 224
+
+
 class _WeightedTrainer(Trainer):
     def __init__(self, *args, class_weights=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -32,14 +43,7 @@ class _WeightedTrainer(Trainer):
 
 
 def _make_transform(processor, train: bool):
-    size_info = processor.size
-    # Handle both dict forms: {"shortest_edge": N} and {"height": H, "width": W}
-    if "shortest_edge" in size_info:
-        size = size_info["shortest_edge"]
-    elif "height" in size_info:
-        size = size_info["height"]
-    else:
-        size = 224
+    size = _resolve_size(processor)
     mean, std = processor.image_mean, processor.image_std
 
     def _t(batch):
@@ -98,23 +102,30 @@ def train_classifier(train_ds, val_ds, output_dir, epochs=3, lr=5e-5,
     return output_dir
 
 
-def predict_scores(model_dir, images) -> list:
+def load_scorer(model_dir):
+    """Load the processor + model ONCE and return ``score(images) -> list[float]``
+    (P(with-signal) per image). Reuse the returned callable across many batches to
+    avoid reloading the model on every call (e.g. in the poller)."""
     processor = AutoImageProcessor.from_pretrained(model_dir)
     model = AutoModelForImageClassification.from_pretrained(model_dir).eval()
-    size_info = processor.size
-    if "shortest_edge" in size_info:
-        size = size_info["shortest_edge"]
-    elif "height" in size_info:
-        size = size_info["height"]
-    else:
-        size = 224
+    size = _resolve_size(processor)
     mean, std = processor.image_mean, processor.image_std
-    scores = []
-    with torch.no_grad():
-        for im in images:
-            arr = np.asarray(im.convert("RGB").resize((size, size)), dtype=np.float32) / 255.0
-            arr = (arr - mean) / std
-            t = torch.tensor(arr).permute(2, 0, 1).float().unsqueeze(0)
-            prob = torch.softmax(model(pixel_values=t).logits, dim=1)[0, 1]
-            scores.append(float(prob))
-    return scores
+
+    def score(images) -> list:
+        scores = []
+        with torch.no_grad():
+            for im in images:
+                arr = np.asarray(im.convert("RGB").resize((size, size)), dtype=np.float32) / 255.0
+                arr = (arr - mean) / std
+                t = torch.tensor(arr).permute(2, 0, 1).float().unsqueeze(0)
+                prob = torch.softmax(model(pixel_values=t).logits, dim=1)[0, 1]
+                scores.append(float(prob))
+        return scores
+
+    return score
+
+
+def predict_scores(model_dir, images) -> list:
+    """One-shot convenience wrapper: load the model and score ``images``.
+    For repeated scoring (the poller), use ``load_scorer`` and reuse its closure."""
+    return load_scorer(model_dir)(images)

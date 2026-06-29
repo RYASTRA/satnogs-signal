@@ -1,11 +1,14 @@
 """Read-only poller: score unvetted SatNOGS observations into the store. Never POSTs."""
 from __future__ import annotations
 
+import logging
 from typing import Callable, Iterable
 
 from satnogs_signal.shared.images import crop_waterfall, load_image
 from satnogs_signal.shared.satnogs_api import iter_observations
 from satnogs_signal.service import store
+
+_log = logging.getLogger(__name__)
 
 
 def poll(
@@ -40,21 +43,24 @@ def poll(
             try:
                 images.append(crop_waterfall(load_image(fetch_bytes(o.waterfall))))
                 kept.append(o)
-            except Exception:
+            except Exception as e:
+                _log.warning("skipping obs %s: could not fetch/decode waterfall: %s", o.id, e)
                 continue  # per-observation isolation: skip unfetchable/corrupt
         if not images:
             continue
 
         try:
             probs = list(score_fn(images))
-        except Exception:
+        except Exception as e:
             # batch scoring failed -> score one at a time so a single bad image
             # can't drop the whole satellite's batch; failures become None and are skipped.
+            _log.warning("batch scoring failed for norad %s (%s); falling back to per-image", norad, e)
             probs = []
-            for img in images:
+            for o, img in zip(kept, images):
                 try:
                     probs.append(score_fn([img])[0])
-                except Exception:
+                except Exception as e2:
+                    _log.warning("skipping obs %s: scoring failed: %s", o.id, e2)
                     probs.append(None)
 
         for o, p in zip(kept, probs):

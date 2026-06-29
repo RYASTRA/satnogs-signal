@@ -7,7 +7,7 @@ import sys
 
 import requests
 
-from satnogs_signal.model.train import predict_scores
+from satnogs_signal.model.train import load_scorer
 from satnogs_signal.service import store, poller
 
 MODEL = "ryroeu/satnogs-signal-classifier"
@@ -26,10 +26,12 @@ def fetch_bytes(url: str) -> bytes:
 
 def main() -> None:
     max_pages = int(sys.argv[1]) if len(sys.argv) > 1 else 4
+    print(f"loading model {MODEL} ...", flush=True)
+    score = load_scorer(MODEL)  # load the model ONCE; the poller reuses this closure
     conn = store.connect(DB)
     n = poller.poll(
         NORADS, conn,
-        score_fn=lambda images: predict_scores(MODEL, images),
+        score_fn=score,
         fetch_bytes=fetch_bytes, token=TOKEN, max_pages=max_pages,
     )
     print(f"scored {n} new observations into {DB}")
