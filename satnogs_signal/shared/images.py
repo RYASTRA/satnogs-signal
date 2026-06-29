@@ -1,4 +1,4 @@
-"""Waterfall image loading + preprocessing (v1: convert-RGB + resize; crop deferred)."""
+"""Waterfall image loading + preprocessing (convert-RGB + crop-to-spectrogram + resize)."""
 from __future__ import annotations
 
 import io
@@ -7,12 +7,12 @@ from PIL import Image
 
 INPUT_SIZE = (224, 224)
 
-# Fractional crop of the spectrogram region, decided by inspecting real waterfalls
-# (scripts/inspect_waterfalls.py). Identity crop = all zeros.
-# Waterfalls have a colorbar/axes border, but since it is constant across both classes
-# we defer cropping; this hook returns the image unchanged until a non-identity crop
-# is warranted.
-_CROP = {"left": 0.0, "right": 0.0, "top": 0.0, "bottom": 0.0}
+# Fractional crop to the spectrogram (plot) region, measured from a full-res SatNOGS
+# waterfall (823x1603): a left Y-axis (~13%), bottom X-axis (~6%), small top margin
+# (~3%), and a right colorbar + its labels (~22%). Cropping these off removes constant
+# clutter AND re-centers the signal (which sits at the plot-area center, ~0.45 of the
+# full width because of the left axis + right colorbar).
+_CROP = {"left": 0.13, "right": 0.22, "top": 0.03, "bottom": 0.06}
 
 
 def load_image(data: bytes) -> Image.Image:

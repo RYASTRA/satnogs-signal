@@ -33,14 +33,16 @@ satellite* (436 observations):
 
 | Metric | **Model** | Classical baseline |
 |--------|-----------|--------------------|
-| ROC-AUC | **0.801** | 0.557 |
-| PR-AUC | **0.800** | 0.558 |
-| precision@10 | **1.000** | 0.700 |
+| ROC-AUC | **0.827** | 0.570 |
+| PR-AUC | **0.829** | 0.557 |
+| precision@10 | **1.000** | 0.600 |
 
-- **Generalizes to an unseen satellite** — FrontierSat, never seen in training (240 obs): ROC-AUC **0.760**.
+- **Generalizes to an unseen satellite** — FrontierSat, never seen in training (240 obs): ROC-AUC **0.772**.
 - **precision@10 = 1.000** — the model's most-confident signal calls are all correct, so the
   *top of the triage queue is trustworthy* (the point: this is a triage aid, not an auto-vetter).
-- Beats the label-free classical baseline (central-frequency energy) by a wide margin — the v1 ship bar.
+- Beats the label-free classical baseline (central-frequency energy) by a wide margin — the ship bar.
+- Inputs are cropped to the spectrogram (colorbar/axes removed), which re-centers the signal — by
+  mode: GFSK **0.93**, FSK **0.92**, FSK AX.100 Mode 5 **0.79**.
 
 **Artifacts** on the Hugging Face Hub:
 - 🤖 Model — [`ryroeu/satnogs-signal-classifier`](https://huggingface.co/ryroeu/satnogs-signal-classifier)
