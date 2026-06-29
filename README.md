@@ -65,17 +65,17 @@ score):
 
 | Queue segment | Model call | Blind reviewers agreed |
 |---------------|------------|------------------------|
-| **Bottom** — P(signal) < 0.02 | "noise" | **6 / 6** — zero false negatives |
+| **Bottom** — P(signal) < 0.02 | "noise" | **6 / 6** — all confirmed noise |
 | **Top** — P(signal) ≥ 0.995 | "signal" | **4 / 6** — two confident false positives |
 
 In practice, then: the model is **excellent at filtering out empty observations** (the bulk of
-the firehose), while the **top of the queue still needs a human glance** — roughly a third of
-even its most-confident signal calls were false positives on this live sample. Use it to
-*prioritize* vetting, not to auto-accept.
+the firehose), while the **top of the queue still needs a human glance** — two of its six
+most-confident signal calls were false positives on this live sample. Use it to *prioritize*
+vetting, not to auto-accept.
 
 *This is a 12-observation blind spot-check of the queue extremes (one reviewer per image), not a
-full metric — it illustrates the real-world behavior the sampling-bias caveat predicts, on data
-the model had never seen.*
+full metric — it illustrates the real-world behavior the sampling-bias caveat predicts, on fresh
+observations the model had not previously scored.*
 
 📄 **Background research:** [docs/prior-art.md](docs/prior-art.md) — a cited survey of
 prior efforts, how SatNOGS vets today, the labeling trap, and what it means for scope.
