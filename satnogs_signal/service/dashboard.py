@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import gradio as gr
+
 from satnogs_signal.service import store
 
 SATNOGS_OBS_URL = "https://network.satnogs.org/observations/{obs_id}/"
 
 
 def triage_rows(conn, limit: int = 50) -> list:
+    """Build ranked triage rows (obs_id, link, norad, mode, P(signal)) from the store."""
     rows = store.ranked(conn, limit)
     return [
         [
@@ -22,12 +25,12 @@ def triage_rows(conn, limit: int = 50) -> list:
 
 
 def monitoring_stats(conn) -> dict:
+    """Return aggregate prediction stats from the store."""
     return store.stats(conn)
 
 
 def build_dashboard(store_path: str):
-    import gradio as gr
-
+    """Build the read-only Gradio triage + monitoring dashboard over the store."""
     def _triage():
         conn = store.connect(store_path)
         try:

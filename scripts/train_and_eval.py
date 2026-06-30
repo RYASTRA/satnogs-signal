@@ -22,9 +22,9 @@ dd = load_splits(source)
 weights = class_weights(dd["train"])
 print(f"class weights (0,1): {weights}")
 
-model_dir = train_classifier(dd["train"], dd["val"], OUT_DIR, epochs=5, weights=weights)
+MODEL_DIR = train_classifier(dd["train"], dd["val"], OUT_DIR, epochs=5, weights=weights)
 test = dd["test"]
-scores = predict_scores(model_dir, list(test["image"]))
+scores = predict_scores(MODEL_DIR, list(test["image"]))
 rep = evaluate_split(test, scores)
 
 lines = [
@@ -43,20 +43,22 @@ for key, groups in rep["sliced_by"].items():
         auc = "n/a" if m["roc_auc"] is None else f"{m['roc_auc']:.3f}"
         lines.append(f"- {g}: n={m['n']} roc_auc={auc}\n")
 Path("docs").mkdir(exist_ok=True)
-open("docs/eval-report.md", "w").writelines(lines)
+with open("docs/eval-report.md", "w", encoding="utf-8") as report_file:
+    report_file.writelines(lines)
 print("wrote docs/eval-report.md")
 print(
-    f"MODEL roc_auc={rep['model']['roc_auc']:.3f}  BASELINE roc_auc={rep['baseline']['roc_auc']:.3f}"
+    f"MODEL roc_auc={rep['model']['roc_auc']:.3f}  "
+    f"BASELINE roc_auc={rep['baseline']['roc_auc']:.3f}"
 )
 
 if do_push:
     from huggingface_hub import ModelCard
     from transformers import AutoImageProcessor, AutoModelForImageClassification
 
-    AutoModelForImageClassification.from_pretrained(model_dir).push_to_hub(
+    AutoModelForImageClassification.from_pretrained(MODEL_DIR).push_to_hub(
         MODEL_REPO, private=True
     )
-    AutoImageProcessor.from_pretrained(model_dir).push_to_hub(MODEL_REPO, private=True)
+    AutoImageProcessor.from_pretrained(MODEL_DIR).push_to_hub(MODEL_REPO, private=True)
     card = ModelCard(
         f"# satnogs-signal-classifier\n\n"
         f"ResNet-18 fine-tuned for SatNOGS waterfall signal-vs-noise (narrowband FSK/GFSK "

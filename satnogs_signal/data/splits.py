@@ -33,6 +33,9 @@ def dedup_by_image_hash(records: list[dict]) -> list[dict]:
 
 @dataclass
 class SplitConfig:
+    """Knobs for :func:`partition`: training satellites, the held-out satellite
+    and stations, and the time-ordered val fraction."""
+
     train_norads: list
     heldout_satellite_norad: int
     heldout_station_ids: set = field(default_factory=set)
@@ -42,6 +45,12 @@ class SplitConfig:
 def partition(
     observations: list[Observation], cfg: SplitConfig
 ) -> dict[str, list[Observation]]:
+    """Split observations into train/val/test, holding out the chosen satellite
+    and stations into test and carving val off the end of the time-sorted pool.
+
+    Raise ``ValueError`` if an observation belongs to neither a train satellite
+    nor the held-out satellite.
+    """
     allowed = set(cfg.train_norads) | {cfg.heldout_satellite_norad}
     test, pool = [], []
     for o in observations:

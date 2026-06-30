@@ -31,6 +31,7 @@ TOKEN = (
 
 
 def main() -> None:
+    """Sample gold observations, tally candidates, and print the ranked table."""
     session = requests.Session()
     sampled = []
     for status in ("with-signal", "without-signal"):

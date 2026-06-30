@@ -20,12 +20,14 @@ _session = requests.Session()
 
 
 def fetch_bytes(url: str) -> bytes:
+    """Fetch the raw bytes at url over a reused HTTP session."""
     r = _session.get(url, timeout=60)
     r.raise_for_status()
     return r.content
 
 
 def main() -> None:
+    """Load the scorer once, then poll and score new observations into the DB."""
     max_pages = int(sys.argv[1]) if len(sys.argv) > 1 else 4
     print(f"loading model {MODEL} ...", flush=True)
     score = load_scorer(MODEL)  # load the model ONCE; the poller reuses this closure

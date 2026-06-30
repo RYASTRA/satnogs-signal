@@ -10,20 +10,23 @@ from satnogs_signal.shared.satnogs_api import Observation, iter_observations
 
 
 def tally_candidates(observations: Iterable[Observation]) -> dict:
+    """Count gold with-signal/without-signal observations and modes per satellite."""
     tally: dict = defaultdict(
         lambda: {"with-signal": 0, "without-signal": 0, "modes": set()}
     )
     for o in observations:
-        if not is_gold(o.waterfall_status):
+        status = o.waterfall_status
+        if status is None or not is_gold(status):
             continue
-        entry = tally[o.norad_cat_id]
-        entry[o.waterfall_status] += 1
+        counts = tally[o.norad_cat_id]
+        counts[status] += 1
         if o.transmitter_mode:
-            entry["modes"].add(o.transmitter_mode)
+            counts["modes"].add(o.transmitter_mode)
     return dict(tally)
 
 
 def rank_candidates(tally: dict, min_per_class: int) -> list:
+    """Keep satellites with enough of both classes, ranked by total observations."""
     qualifying = [
         (norad, e)
         for norad, e in tally.items()
@@ -36,6 +39,7 @@ def rank_candidates(tally: dict, min_per_class: int) -> list:
 
 
 def run_audit(pages_per_class: int = 8, min_per_class: int = 150, session=None) -> list:
+    """Sample both classes from the live network and return ranked candidates."""
     sampled = []
     for status in ("with-signal", "without-signal"):
         sampled.extend(

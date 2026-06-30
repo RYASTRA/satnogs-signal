@@ -24,6 +24,7 @@ def poll(
     request_interval: float = 1.0,
     now: str = "",
 ) -> int:
+    """Score unvetted observations for each NORAD into the store; return count scored."""
     scored = 0
     for norad in norads:
         candidates = [

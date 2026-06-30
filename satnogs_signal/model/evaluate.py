@@ -16,6 +16,7 @@ def _summary(labels, scores) -> dict:
 
 
 def evaluate_split(split, model_scores) -> dict:
+    """Compare model vs baseline scores on a split, with sliced metrics."""
     labels = list(split["label"])
     baseline_scores = score_images(split["image"])
     sliced = {}

@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS predictions (
 
 
 def connect(path: str) -> sqlite3.Connection:
+    """Open the SQLite store at path, set row factory, and ensure the schema."""
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
@@ -28,6 +29,7 @@ def connect(path: str) -> sqlite3.Connection:
 
 
 def upsert_prediction(conn: sqlite3.Connection, rec: dict) -> None:
+    """Insert rec or, on obs_id conflict, update its score fields; commit."""
     conn.execute(
         """
         INSERT INTO predictions
@@ -47,6 +49,7 @@ def upsert_prediction(conn: sqlite3.Connection, rec: dict) -> None:
 
 
 def already_scored(conn: sqlite3.Connection, obs_ids: Iterable[int]) -> set:
+    """Return the subset of obs_ids that already have a stored prediction."""
     ids = list(obs_ids)
     if not ids:
         return set()
@@ -56,6 +59,7 @@ def already_scored(conn: sqlite3.Connection, obs_ids: Iterable[int]) -> set:
 
 
 def ranked(conn: sqlite3.Connection, limit: int = 100) -> list:
+    """Return up to limit predictions as dicts, highest p_signal first."""
     rows = conn.execute(
         "SELECT * FROM predictions ORDER BY p_signal DESC, obs_id DESC LIMIT ?",
         (limit,),
@@ -64,6 +68,7 @@ def ranked(conn: sqlite3.Connection, limit: int = 100) -> list:
 
 
 def stats(conn: sqlite3.Connection) -> dict:
+    """Return store-wide counts: total rows, mean p_signal, and signal count."""
     row = conn.execute(
         "SELECT COUNT(*) AS n, AVG(p_signal) AS avg_p, "
         "SUM(predicted_label) AS n_sig FROM predictions"

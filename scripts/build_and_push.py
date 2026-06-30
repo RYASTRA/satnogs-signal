@@ -47,6 +47,7 @@ session = requests.Session()
 
 
 def fetch_bytes(url: str) -> bytes:
+    """Download a URL over the shared session and return the raw response bytes."""
     r = session.get(url, timeout=60)
     r.raise_for_status()
     return r.content
@@ -60,7 +61,7 @@ def collect(norad: int, name: str) -> list:
     for status in ("with-signal", "without-signal"):
         cache_file = os.path.join(CACHE_DIR, f"{norad}_{status}.json")
         if os.path.exists(cache_file):
-            with open(cache_file) as f:
+            with open(cache_file, encoding="utf-8") as f:
                 got = [Observation(**d) for d in json.load(f)]
             print(
                 f"  cached {len(got):>4} {status:<14} for {name} ({norad})",

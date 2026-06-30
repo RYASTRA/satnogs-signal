@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Callable
+from typing import Callable, cast
 
 from datasets import ClassLabel, Dataset, DatasetDict, Features, Image as HFImage, Value
 
 from satnogs_signal.shared.images import load_image, preprocess
 from satnogs_signal.shared.labels import is_gold, label_to_int
+from satnogs_signal.shared.satnogs_api import Observation
 from satnogs_signal.data.splits import SplitConfig, dedup_by_image_hash, partition
 
 REPO_ID = "ryroeu/satnogs-signal-waterfalls"
@@ -16,6 +17,7 @@ _LABEL_NAMES = ["without-signal", "with-signal"]  # index == integer label
 
 
 def build_records(observations, fetch_bytes: Callable[[str], bytes]) -> list:
+    """Build dataset records from gold, image-bearing, station-bearing observations."""
     records = []
     for o in observations:
         # Skip non-gold, image-less, OR station-less observations: a null station
@@ -60,6 +62,7 @@ def _features() -> Features:
 
 
 def _obs_index(records):
+    """Map each record to its observation id for post-split lookup."""
     return {r["id"]: r for r in records}
 
 
