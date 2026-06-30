@@ -225,3 +225,7 @@ _model/
 
 # triage service local prediction DB (scored data; not tracked)
 triage.db
+
+# internal docs (plans/specs/research) and test suite — kept private, not pushed
+docs/
+tests/

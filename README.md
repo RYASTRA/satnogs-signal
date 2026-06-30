@@ -49,7 +49,6 @@ satellite* (436 observations):
 **Artifacts** on the Hugging Face Hub:
 - 🤖 Model — [`ryroeu/satnogs-signal-classifier`](https://huggingface.co/ryroeu/satnogs-signal-classifier)
 - 📊 Dataset — [`ryroeu/satnogs-signal-waterfalls`](https://huggingface.co/datasets/ryroeu/satnogs-signal-waterfalls)
-- 📈 Full eval (per-mode / per-satellite slices) — [docs/eval-report.md](docs/eval-report.md)
 
 *Trained on 4 narrowband FSK/GFSK telemetry satellites (OTP-2, CUBEBEL-2, AEPEX, CatSat) with
 FrontierSat held out. Caveat: gold labels skew toward clearer passes than the unvetted firehose,
@@ -77,16 +76,12 @@ vetting, not to auto-accept.
 full metric — it illustrates the real-world behavior the sampling-bias caveat predicts, on fresh
 observations the model had not previously scored.*
 
-📄 **Background research:** [docs/prior-art.md](docs/prior-art.md) — a cited survey of
-prior efforts, how SatNOGS vets today, the labeling trap, and what it means for scope.
-
 ## Running it (Docker — no virtualenv)
 
 Everything runs in a container; there's no local Python environment to manage.
 
 ```bash
 docker compose build                                    # build the image (installs deps)
-docker compose run --rm app pytest -q                   # run the test suite
 docker compose run --rm app python scripts/audit.py     # audit candidate satellites
 docker compose run --rm app python scripts/build_and_push.py 120   # build the dataset
 docker compose run --rm app python scripts/train_and_eval.py _dataset_build   # train + eval
