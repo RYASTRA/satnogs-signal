@@ -3,6 +3,7 @@ write the eval report, and optionally push the model + card to the Hub.
 
 Setup:  set -a; source .env; set +a   (HF_TOKEN needed for --push)
 Usage:  python scripts/train_and_eval.py [dataset_source] [--push]"""
+
 import sys
 from pathlib import Path
 
@@ -26,9 +27,15 @@ test = dd["test"]
 scores = predict_scores(model_dir, list(test["image"]))
 rep = evaluate_split(test, scores)
 
-lines = ["# Eval report\n", f"Test rows: {test.num_rows}\n", "## Model vs baseline (held-out test)\n"]
+lines = [
+    "# Eval report\n",
+    f"Test rows: {test.num_rows}\n",
+    "## Model vs baseline (held-out test)\n",
+]
 for k in ("roc_auc", "pr_auc", "precision_at_10"):
-    lines.append(f"- {k}: model={rep['model'][k]:.3f}  baseline={rep['baseline'][k]:.3f}\n")
+    lines.append(
+        f"- {k}: model={rep['model'][k]:.3f}  baseline={rep['baseline'][k]:.3f}\n"
+    )
 lines.append("\n## Sliced model ROC-AUC\n")
 for key, groups in rep["sliced_by"].items():
     lines.append(f"### by {key}\n")
@@ -38,12 +45,17 @@ for key, groups in rep["sliced_by"].items():
 Path("docs").mkdir(exist_ok=True)
 open("docs/eval-report.md", "w").writelines(lines)
 print("wrote docs/eval-report.md")
-print(f"MODEL roc_auc={rep['model']['roc_auc']:.3f}  BASELINE roc_auc={rep['baseline']['roc_auc']:.3f}")
+print(
+    f"MODEL roc_auc={rep['model']['roc_auc']:.3f}  BASELINE roc_auc={rep['baseline']['roc_auc']:.3f}"
+)
 
 if do_push:
     from huggingface_hub import ModelCard
     from transformers import AutoImageProcessor, AutoModelForImageClassification
-    AutoModelForImageClassification.from_pretrained(model_dir).push_to_hub(MODEL_REPO, private=True)
+
+    AutoModelForImageClassification.from_pretrained(model_dir).push_to_hub(
+        MODEL_REPO, private=True
+    )
     AutoImageProcessor.from_pretrained(model_dir).push_to_hub(MODEL_REPO, private=True)
     card = ModelCard(
         f"# satnogs-signal-classifier\n\n"

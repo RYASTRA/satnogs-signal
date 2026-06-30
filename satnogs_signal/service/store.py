@@ -1,4 +1,5 @@
 """Idempotent SQLite store of triage predictions, keyed by obs_id."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -56,7 +57,8 @@ def already_scored(conn: sqlite3.Connection, obs_ids: Iterable[int]) -> set:
 
 def ranked(conn: sqlite3.Connection, limit: int = 100) -> list:
     rows = conn.execute(
-        "SELECT * FROM predictions ORDER BY p_signal DESC, obs_id DESC LIMIT ?", (limit,)
+        "SELECT * FROM predictions ORDER BY p_signal DESC, obs_id DESC LIMIT ?",
+        (limit,),
     )
     return [dict(r) for r in rows]
 

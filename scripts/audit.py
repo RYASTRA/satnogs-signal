@@ -10,6 +10,7 @@ throttles to one page per THROTTLE_S. Put your token in a gitignored `.env` and 
     set -a; source .env; set +a
     python scripts/audit.py [pages_per_class]
 """
+
 import os
 import sys
 
@@ -51,7 +52,9 @@ def main() -> None:
 
     names = {}
     try:
-        r = session.get("https://db.satnogs.org/api/satellites/?format=json", timeout=90)
+        r = session.get(
+            "https://db.satnogs.org/api/satellites/?format=json", timeout=90
+        )
         for s in r.json():
             names[s.get("norad_cat_id")] = s.get("name")
     except Exception as e:  # pragma: no cover

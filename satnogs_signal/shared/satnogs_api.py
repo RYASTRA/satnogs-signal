@@ -1,4 +1,5 @@
 """Read-only client for the SatNOGS Network API."""
+
 from __future__ import annotations
 
 import time
@@ -72,7 +73,7 @@ def _get_with_backoff(
             return resp
         if resp.status_code in _RETRY_STATUS and attempt < max_retries - 1:
             wait = _retry_after_seconds(
-                resp, default=backoff_base * (2 ** attempt), cap=max_retry_after
+                resp, default=backoff_base * (2**attempt), cap=max_retry_after
             )
             sleep(wait)
             continue

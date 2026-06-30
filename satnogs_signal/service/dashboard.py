@@ -1,4 +1,5 @@
 """Read-only Gradio dashboard: triage queue + monitoring, over the predictions store."""
+
 from __future__ import annotations
 
 from satnogs_signal.service import store

@@ -1,4 +1,5 @@
 """Waterfall image loading + preprocessing (convert-RGB + crop-to-spectrogram + resize)."""
+
 from __future__ import annotations
 
 import io

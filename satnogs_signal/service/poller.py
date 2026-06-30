@@ -1,4 +1,5 @@
 """Read-only poller: score unvetted SatNOGS observations into the store. Never POSTs."""
+
 from __future__ import annotations
 
 import logging
@@ -28,10 +29,14 @@ def poll(
         candidates = [
             o
             for o in fetch_obs(
-                norad_cat_id=norad, token=token,
-                request_interval=request_interval, max_pages=max_pages,
+                norad_cat_id=norad,
+                token=token,
+                request_interval=request_interval,
+                max_pages=max_pages,
             )
-            if o.waterfall_status == "unknown" and o.waterfall and o.ground_station is not None
+            if o.waterfall_status == "unknown"
+            and o.waterfall
+            and o.ground_station is not None
         ]
         if not candidates:
             continue
@@ -44,7 +49,9 @@ def poll(
                 images.append(crop_waterfall(load_image(fetch_bytes(o.waterfall))))
                 kept.append(o)
             except Exception as e:
-                _log.warning("skipping obs %s: could not fetch/decode waterfall: %s", o.id, e)
+                _log.warning(
+                    "skipping obs %s: could not fetch/decode waterfall: %s", o.id, e
+                )
                 continue  # per-observation isolation: skip unfetchable/corrupt
         if not images:
             continue
@@ -54,7 +61,11 @@ def poll(
         except Exception as e:
             # batch scoring failed -> score one at a time so a single bad image
             # can't drop the whole satellite's batch; failures become None and are skipped.
-            _log.warning("batch scoring failed for norad %s (%s); falling back to per-image", norad, e)
+            _log.warning(
+                "batch scoring failed for norad %s (%s); falling back to per-image",
+                norad,
+                e,
+            )
             probs = []
             for o, img in zip(kept, images):
                 try:
@@ -69,10 +80,15 @@ def poll(
             store.upsert_prediction(
                 conn,
                 {
-                    "obs_id": o.id, "norad": o.norad_cat_id, "mode": o.transmitter_mode,
-                    "station": o.ground_station, "timestamp": o.start,
-                    "waterfall_url": o.waterfall, "p_signal": float(p),
-                    "predicted_label": int(float(p) >= 0.5), "scored_at": now,
+                    "obs_id": o.id,
+                    "norad": o.norad_cat_id,
+                    "mode": o.transmitter_mode,
+                    "station": o.ground_station,
+                    "timestamp": o.start,
+                    "waterfall_url": o.waterfall,
+                    "p_signal": float(p),
+                    "predicted_label": int(float(p) >= 0.5),
+                    "scored_at": now,
                 },
             )
             scored += 1

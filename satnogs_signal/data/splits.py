@@ -6,6 +6,7 @@ the station instead of the signal. The held-out SATELLITE measures cross-satelli
 generalization. Because a station's whole history lands in one split, same-pass
 frames cannot straddle splits.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -38,7 +39,9 @@ class SplitConfig:
     val_fraction_by_time: float = 0.2
 
 
-def partition(observations: list[Observation], cfg: SplitConfig) -> dict[str, list[Observation]]:
+def partition(
+    observations: list[Observation], cfg: SplitConfig
+) -> dict[str, list[Observation]]:
     allowed = set(cfg.train_norads) | {cfg.heldout_satellite_norad}
     test, pool = [], []
     for o in observations:
@@ -49,7 +52,10 @@ def partition(observations: list[Observation], cfg: SplitConfig) -> dict[str, li
                 f"({cfg.heldout_satellite_norad}); refusing to place an unexpected "
                 f"satellite into a split"
             )
-        if o.norad_cat_id == cfg.heldout_satellite_norad or o.ground_station in cfg.heldout_station_ids:
+        if (
+            o.norad_cat_id == cfg.heldout_satellite_norad
+            or o.ground_station in cfg.heldout_station_ids
+        ):
             test.append(o)
         else:
             pool.append(o)

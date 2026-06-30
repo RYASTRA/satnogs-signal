@@ -1,4 +1,5 @@
 """Audit the live network to pick narrow-and-deep candidate satellites."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -28,7 +29,9 @@ def rank_candidates(tally: dict, min_per_class: int) -> list:
         for norad, e in tally.items()
         if e["with-signal"] >= min_per_class and e["without-signal"] >= min_per_class
     ]
-    qualifying.sort(key=lambda kv: kv[1]["with-signal"] + kv[1]["without-signal"], reverse=True)
+    qualifying.sort(
+        key=lambda kv: kv[1]["with-signal"] + kv[1]["without-signal"], reverse=True
+    )
     return qualifying
 
 
@@ -36,11 +39,15 @@ def run_audit(pages_per_class: int = 8, min_per_class: int = 150, session=None) 
     sampled = []
     for status in ("with-signal", "without-signal"):
         sampled.extend(
-            iter_observations(waterfall_status=status, session=session, max_pages=pages_per_class)
+            iter_observations(
+                waterfall_status=status, session=session, max_pages=pages_per_class
+            )
         )
     return rank_candidates(tally_candidates(sampled), min_per_class)
 
 
 if __name__ == "__main__":  # pragma: no cover
     for norad, entry in run_audit():
-        print(norad, entry["with-signal"], entry["without-signal"], sorted(entry["modes"]))
+        print(
+            norad, entry["with-signal"], entry["without-signal"], sorted(entry["modes"])
+        )

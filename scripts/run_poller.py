@@ -2,6 +2,7 @@
 Read-only. Setup: set the SatNOGS token in .env. Usage:
     docker compose run --rm app python scripts/run_poller.py [max_pages]
 """
+
 import os
 import sys
 
@@ -30,9 +31,12 @@ def main() -> None:
     score = load_scorer(MODEL)  # load the model ONCE; the poller reuses this closure
     conn = store.connect(DB)
     n = poller.poll(
-        NORADS, conn,
+        NORADS,
+        conn,
         score_fn=score,
-        fetch_bytes=fetch_bytes, token=TOKEN, max_pages=max_pages,
+        fetch_bytes=fetch_bytes,
+        token=TOKEN,
+        max_pages=max_pages,
     )
     print(f"scored {n} new observations into {DB}")
     print(store.stats(conn))

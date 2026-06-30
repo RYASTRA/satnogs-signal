@@ -1,4 +1,5 @@
 """Fine-tune a compact ResNet-18 for waterfall signal-vs-noise, class-weighted."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -34,7 +35,9 @@ class _WeightedTrainer(Trainer):
             else None
         )
 
-    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+    def compute_loss(
+        self, model, inputs, return_outputs=False, num_items_in_batch=None
+    ):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         w = self._w.to(outputs.logits.device) if self._w is not None else None
@@ -61,8 +64,15 @@ def _make_transform(processor, train: bool):
     return _t
 
 
-def train_classifier(train_ds, val_ds, output_dir, epochs=3, lr=5e-5,
-                     weights=None, model_name="microsoft/resnet-18") -> str:
+def train_classifier(
+    train_ds,
+    val_ds,
+    output_dir,
+    epochs=3,
+    lr=5e-5,
+    weights=None,
+    model_name="microsoft/resnet-18",
+) -> str:
     processor = AutoImageProcessor.from_pretrained(model_name)
     model = AutoModelForImageClassification.from_pretrained(
         model_name,
@@ -93,8 +103,12 @@ def train_classifier(train_ds, val_ds, output_dir, epochs=3, lr=5e-5,
         remove_unused_columns=False,
     )
     trainer = _WeightedTrainer(
-        model=model, args=args, train_dataset=train_ds, eval_dataset=val_ds,
-        data_collator=_collate, class_weights=weights,
+        model=model,
+        args=args,
+        train_dataset=train_ds,
+        eval_dataset=val_ds,
+        data_collator=_collate,
+        class_weights=weights,
     )
     trainer.train()
     trainer.save_model(output_dir)
@@ -115,7 +129,10 @@ def load_scorer(model_dir):
         scores = []
         with torch.no_grad():
             for im in images:
-                arr = np.asarray(im.convert("RGB").resize((size, size)), dtype=np.float32) / 255.0
+                arr = (
+                    np.asarray(im.convert("RGB").resize((size, size)), dtype=np.float32)
+                    / 255.0
+                )
                 arr = (arr - mean) / std
                 t = torch.tensor(arr).permute(2, 0, 1).float().unsqueeze(0)
                 prob = torch.softmax(model(pixel_values=t).logits, dim=1)[0, 1]

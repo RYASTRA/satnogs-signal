@@ -3,6 +3,7 @@
 The SatNOGS wiki defines a signal as a (roughly) vertical line near the center
 of the waterfall. This scores the ratio of central-column brightness to the rest
 — crude on purpose, so beating it is meaningful."""
+
 from __future__ import annotations
 
 import numpy as np

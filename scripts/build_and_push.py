@@ -11,6 +11,7 @@ Pushing to the Hub is a SEPARATE explicit step (pass --push, requires HF auth).
 Setup:  set -a; source .env; set +a
 Usage:  python scripts/build_and_push.py [cap_per_class] [--push]
 """
+
 import dataclasses
 import json
 import os
@@ -20,13 +21,20 @@ from collections import Counter
 import requests
 
 from satnogs_signal.shared.satnogs_api import iter_observations, Observation
-from satnogs_signal.data.build_dataset import build_records, to_dataset_dict, push, REPO_ID
+from satnogs_signal.data.build_dataset import (
+    build_records,
+    to_dataset_dict,
+    push,
+    REPO_ID,
+)
 from satnogs_signal.data.splits import SplitConfig
 
 TOKEN = os.environ.get("satnogs_network_api_key") or None
 THROTTLE = 1.0
 OUT = "_dataset_build"  # gitignored local save dir
-CACHE_DIR = os.path.join(OUT, "cache")  # per-(satellite,status) listing cache (resumable)
+CACHE_DIR = os.path.join(
+    OUT, "cache"
+)  # per-(satellite,status) listing cache (resumable)
 
 TRAIN = {63235: "OTP-2", 57175: "CUBEBEL-2", 68506: "AEPEX", 60246: "CatSat"}
 HELDOUT_SAT = {69015: "FrontierSat"}
@@ -54,19 +62,30 @@ def collect(norad: int, name: str) -> list:
         if os.path.exists(cache_file):
             with open(cache_file) as f:
                 got = [Observation(**d) for d in json.load(f)]
-            print(f"  cached {len(got):>4} {status:<14} for {name} ({norad})", file=sys.stderr)
+            print(
+                f"  cached {len(got):>4} {status:<14} for {name} ({norad})",
+                file=sys.stderr,
+            )
         else:
             got = list(
                 iter_observations(
-                    norad_cat_id=norad, waterfall_status=status, session=session,
-                    max_pages=pages, token=TOKEN, request_interval=THROTTLE,
-                    max_retries=8, backoff_base=2.0,
+                    norad_cat_id=norad,
+                    waterfall_status=status,
+                    session=session,
+                    max_pages=pages,
+                    token=TOKEN,
+                    request_interval=THROTTLE,
+                    max_retries=8,
+                    backoff_base=2.0,
                 )
             )[:CAP]
             os.makedirs(CACHE_DIR, exist_ok=True)
             with open(cache_file, "w") as f:
                 json.dump([dataclasses.asdict(o) for o in got], f)
-            print(f"  listed {len(got):>4} {status:<14} for {name} ({norad})", file=sys.stderr)
+            print(
+                f"  listed {len(got):>4} {status:<14} for {name} ({norad})",
+                file=sys.stderr,
+            )
         obs.extend(got)
     return obs
 
@@ -76,7 +95,9 @@ def choose_heldout_stations(train_records: list, frac: float = 0.20) -> set:
     target = frac * len(train_records)
     held, covered = set(), 0
     for station, c in sorted(counts.items(), key=lambda kv: kv[1]):  # smaller first
-        if covered >= target or len(held) >= len(counts) - 1:  # never hold out ALL stations
+        if (
+            covered >= target or len(held) >= len(counts) - 1
+        ):  # never hold out ALL stations
             break
         held.add(station)
         covered += c
@@ -85,14 +106,19 @@ def choose_heldout_stations(train_records: list, frac: float = 0.20) -> set:
 
 def main() -> None:
     if not TOKEN:
-        print("WARNING: no satnogs_network_api_key in env — listing will be rate-limited.",
-              file=sys.stderr)
+        print(
+            "WARNING: no satnogs_network_api_key in env — listing will be rate-limited.",
+            file=sys.stderr,
+        )
 
     all_obs = []
     for norad, name in {**TRAIN, **HELDOUT_SAT}.items():
         all_obs.extend(collect(norad, name))
 
-    print(f"downloading + preprocessing {len(all_obs)} waterfalls (S3)...", file=sys.stderr)
+    print(
+        f"downloading + preprocessing {len(all_obs)} waterfalls (S3)...",
+        file=sys.stderr,
+    )
     records = build_records(all_obs, fetch_bytes=fetch_bytes)
     print(f"  built {len(records)} records", file=sys.stderr)
 
@@ -110,16 +136,20 @@ def main() -> None:
     print(f"\nHeld-out stations ({len(heldout_stations)}): {sorted(heldout_stations)}")
     for split in ("train", "val", "test"):
         labels = Counter(dd[split]["label"])
-        print(f"  {split:<5} {dd[split].num_rows:>5} rows  "
-              f"(with-signal={labels.get(1, 0)}, without-signal={labels.get(0, 0)})")
+        print(
+            f"  {split:<5} {dd[split].num_rows:>5} rows  "
+            f"(with-signal={labels.get(1, 0)}, without-signal={labels.get(0, 0)})"
+        )
 
     dd.save_to_disk(OUT)
     print(f"\nsaved DatasetDict to ./{OUT}/")
 
     if DO_PUSH:
         if not (os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")):
-            print("ERROR: no HF_TOKEN in env. Add it to .env and re-run with --push.",
-                  file=sys.stderr)
+            print(
+                "ERROR: no HF_TOKEN in env. Add it to .env and re-run with --push.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         print(f"pushing to the Hub: {REPO_ID} (private)...")
         push(dd)

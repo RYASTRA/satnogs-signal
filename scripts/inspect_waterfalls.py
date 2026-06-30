@@ -1,5 +1,6 @@
 """Render a contact sheet of sample waterfalls per class, to decide the crop box.
 Usage: python scripts/inspect_waterfalls.py _dataset_build [n_per_class]"""
+
 import sys
 
 from PIL import Image

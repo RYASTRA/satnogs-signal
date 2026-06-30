@@ -1,5 +1,6 @@
 """Ranking-first evaluation metrics. Accuracy is intentionally NOT here — the
 service ranks observations, so we score separation quality, not labeling."""
+
 from __future__ import annotations
 
 from sklearn.metrics import average_precision_score, roc_auc_score

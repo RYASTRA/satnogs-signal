@@ -1,4 +1,5 @@
 """Gold waterfall-vetting label mapping. Never use observation `status` as a label."""
+
 from __future__ import annotations
 
 from typing import Optional

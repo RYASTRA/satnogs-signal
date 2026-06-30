@@ -1,4 +1,5 @@
 """Evaluate the model vs the classical baseline on a split, ranking-first and sliced."""
+
 from __future__ import annotations
 
 from satnogs_signal.model.baseline import score_images
