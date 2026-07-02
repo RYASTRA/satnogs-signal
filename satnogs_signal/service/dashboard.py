@@ -31,6 +31,7 @@ def monitoring_stats(conn) -> dict:
 
 def build_dashboard(store_path: str):
     """Build the read-only Gradio triage + monitoring dashboard over the store."""
+
     def _triage():
         conn = store.connect(store_path)
         try:

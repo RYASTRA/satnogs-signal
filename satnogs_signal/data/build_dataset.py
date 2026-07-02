@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from typing import Callable, cast
 
 from datasets import ClassLabel, Dataset, DatasetDict, Features, Image as HFImage, Value
@@ -14,6 +15,16 @@ from satnogs_signal.data.splits import SplitConfig, dedup_by_image_hash, partiti
 
 REPO_ID = "ryroeu/satnogs-signal-waterfalls"
 _LABEL_NAMES = ["without-signal", "with-signal"]  # index == integer label
+
+
+@dataclass(frozen=True)
+class _SplitKeys:
+    """Minimal Observation stand-in carrying only the fields ``partition`` reads."""
+
+    norad_cat_id: int | None
+    ground_station: int | None
+    start: str | None
+    id: int
 
 
 def build_records(observations, fetch_bytes: Callable[[str], bytes]) -> list:
@@ -48,6 +59,7 @@ def build_records(observations, fetch_bytes: Callable[[str], bytes]) -> list:
 
 
 def _features() -> Features:
+    """Return the HF Features schema for the dataset (image, label, and metadata columns)."""
     return Features(
         {
             "image": HFImage(),
@@ -67,21 +79,30 @@ def _obs_index(records):
 
 
 def to_dataset_dict(records: list, cfg: SplitConfig) -> DatasetDict:
+    """Dedup records globally, partition into train/val/test, and build the DatasetDict."""
     # Global exact-image dedup BEFORE partition: guarantees a byte-identical image
     # can never land in two splits (the strongest leakage guard). Per-split dedup
     # would NOT catch a cross-split duplicate, so it must happen here, before splitting.
     records = dedup_by_image_hash(records)
     by_id = _obs_index(records)
 
-    # Rebuild Observation-like objects only need the split keys; reuse the record dicts.
-    class _O:
-        def __init__(self, r):
-            self.norad_cat_id = r["norad"]
-            self.ground_station = r["station"]
-            self.start = r["timestamp"]
-            self.id = r["id"]
-
-    parts = partition([_O(r) for r in records], cfg)
+    # partition() only reads split keys, so hand it lightweight stand-ins built from
+    # the record dicts (cast so the type checker accepts them where Observations go).
+    parts = partition(
+        cast(
+            list[Observation],
+            [
+                _SplitKeys(
+                    norad_cat_id=r["norad"],
+                    ground_station=r["station"],
+                    start=r["timestamp"],
+                    id=r["id"],
+                )
+                for r in records
+            ],
+        ),
+        cfg,
+    )
     feats = _features()
 
     def _make(split_obs):
@@ -103,4 +124,5 @@ def to_dataset_dict(records: list, cfg: SplitConfig) -> DatasetDict:
 
 
 def push(dataset_dict: DatasetDict, repo_id: str = REPO_ID):  # pragma: no cover
+    """Push the dataset to the HF Hub as a private repo."""
     dataset_dict.push_to_hub(repo_id, private=True)

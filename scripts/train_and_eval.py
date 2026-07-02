@@ -9,7 +9,7 @@ from pathlib import Path
 
 from satnogs_signal.model.data import class_weights, load_splits
 from satnogs_signal.model.evaluate import evaluate_split
-from satnogs_signal.model.train import predict_scores, train_classifier
+from satnogs_signal.model.train import TrainConfig, predict_scores, train_classifier
 
 MODEL_REPO = "ryroeu/satnogs-signal-classifier"
 OUT_DIR = "_model"
@@ -22,7 +22,9 @@ dd = load_splits(source)
 weights = class_weights(dd["train"])
 print(f"class weights (0,1): {weights}")
 
-MODEL_DIR = train_classifier(dd["train"], dd["val"], OUT_DIR, epochs=5, weights=weights)
+MODEL_DIR = train_classifier(
+    dd["train"], dd["val"], OUT_DIR, TrainConfig(epochs=5, weights=weights)
+)
 test = dd["test"]
 scores = predict_scores(MODEL_DIR, list(test["image"]))
 rep = evaluate_split(test, scores)
@@ -64,7 +66,8 @@ if do_push:
         f"ResNet-18 fine-tuned for SatNOGS waterfall signal-vs-noise (narrowband FSK/GFSK "
         f"cubesat telemetry). Trained on gold `waterfall_status` labels.\n\n"
         f"## Held-out test metrics\n"
-        f"- model ROC-AUC: {rep['model']['roc_auc']:.3f} (baseline {rep['baseline']['roc_auc']:.3f})\n"
+        f"- model ROC-AUC: {rep['model']['roc_auc']:.3f} "
+        f"(baseline {rep['baseline']['roc_auc']:.3f})\n"
         f"- model PR-AUC: {rep['model']['pr_auc']:.3f}\n\n"
         f"## Limits\n"
         f"Sampling bias: gold labels skew toward clearer passes than the unvetted firehose; "

@@ -37,8 +37,7 @@ def main() -> None:
         conn,
         score_fn=score,
         fetch_bytes=fetch_bytes,
-        token=TOKEN,
-        max_pages=max_pages,
+        config=poller.PollConfig(token=TOKEN, max_pages=max_pages),
     )
     print(f"scored {n} new observations into {DB}")
     print(store.stats(conn))

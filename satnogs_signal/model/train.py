@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 import torch
 from torch import nn
@@ -15,6 +17,16 @@ from transformers import (
 _LABELS = ["without-signal", "with-signal"]
 
 
+@dataclass(frozen=True)
+class TrainConfig:
+    """Hyperparameters for :func:`train_classifier`."""
+
+    epochs: int = 3
+    lr: float = 5e-5
+    weights: list[float] | None = None
+    model_name: str = "microsoft/resnet-18"
+
+
 def _resolve_size(processor) -> int:
     """Resolve the model's expected square input size from the image-processor config.
     Handles both {"shortest_edge": N} and {"height": H, "width": W} forms."""
@@ -26,23 +38,24 @@ def _resolve_size(processor) -> int:
     return 224
 
 
-class _WeightedTrainer(Trainer):
-    def __init__(self, *args, class_weights=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._w = (
-            torch.tensor(class_weights, dtype=torch.float)
-            if class_weights is not None
-            else None
-        )
+def _weighted_cross_entropy(class_weights):
+    """Return a HF Trainer ``compute_loss_func`` applying per-class weights (or none).
 
-    def compute_loss(
-        self, model, inputs, return_outputs=False, num_items_in_batch=None
-    ):
-        labels = inputs.pop("labels")
-        outputs = model(**inputs)
-        w = self._w.to(outputs.logits.device) if self._w is not None else None
-        loss = nn.functional.cross_entropy(outputs.logits, labels, weight=w)
-        return (loss, outputs) if return_outputs else loss
+    Passed as ``Trainer(compute_loss_func=...)``; the Trainer pops labels, runs the
+    model, then calls this with ``(outputs, labels, num_items_in_batch=...)`` and
+    handles ``return_outputs`` itself — so we only compute and return the loss.
+    """
+    w = (
+        torch.tensor(class_weights, dtype=torch.float)
+        if class_weights is not None
+        else None
+    )
+
+    def loss_fn(outputs, labels, **_kwargs):
+        weight = w.to(outputs.logits.device) if w is not None else None
+        return nn.functional.cross_entropy(outputs.logits, labels, weight=weight)
+
+    return loss_fn
 
 
 def _make_transform(processor, train: bool):
@@ -65,17 +78,12 @@ def _make_transform(processor, train: bool):
 
 
 def train_classifier(
-    train_ds,
-    val_ds,
-    output_dir,
-    epochs=3,
-    lr=5e-5,
-    weights=None,
-    model_name="microsoft/resnet-18",
+    train_ds, val_ds, output_dir, config: TrainConfig = TrainConfig()
 ) -> str:
-    processor = AutoImageProcessor.from_pretrained(model_name)
+    """Fine-tune the class-weighted ResNet-18 on the splits, save to output_dir, return it."""
+    processor = AutoImageProcessor.from_pretrained(config.model_name)
     model = AutoModelForImageClassification.from_pretrained(
-        model_name,
+        config.model_name,
         num_labels=2,
         id2label={0: _LABELS[0], 1: _LABELS[1]},
         label2id={_LABELS[0]: 0, _LABELS[1]: 1},
@@ -92,8 +100,8 @@ def train_classifier(
 
     args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=epochs,
-        learning_rate=lr,
+        num_train_epochs=config.epochs,
+        learning_rate=config.lr,
         per_device_train_batch_size=16,
         per_device_eval_batch_size=16,
         eval_strategy="epoch",
@@ -102,13 +110,13 @@ def train_classifier(
         report_to=[],
         remove_unused_columns=False,
     )
-    trainer = _WeightedTrainer(
+    trainer = Trainer(
         model=model,
         args=args,
         train_dataset=train_ds,
         eval_dataset=val_ds,
         data_collator=_collate,
-        class_weights=weights,
+        compute_loss_func=_weighted_cross_entropy(config.weights),
     )
     trainer.train()
     trainer.save_model(output_dir)

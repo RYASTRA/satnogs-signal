@@ -17,10 +17,12 @@ _CROP = {"left": 0.13, "right": 0.22, "top": 0.03, "bottom": 0.06}
 
 
 def load_image(data: bytes) -> Image.Image:
+    """Decode raw image bytes into a PIL image (lazy; decode errors surface on use)."""
     return Image.open(io.BytesIO(data))
 
 
 def crop_waterfall(img: Image.Image) -> Image.Image:
+    """Crop off the SatNOGS axes/colorbar margins, re-centering the spectrogram."""
     w, h = img.size
     box = (
         int(w * _CROP["left"]),
@@ -32,4 +34,5 @@ def crop_waterfall(img: Image.Image) -> Image.Image:
 
 
 def preprocess(img: Image.Image, size=INPUT_SIZE) -> Image.Image:
+    """Crop, convert to RGB, and resize a waterfall to the model input size."""
     return crop_waterfall(img).convert("RGB").resize(size, Image.Resampling.LANCZOS)

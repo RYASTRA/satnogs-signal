@@ -11,8 +11,9 @@ source = sys.argv[1] if len(sys.argv) > 1 else "_dataset_build"
 n = int(sys.argv[2]) if len(sys.argv) > 2 else 16
 dd = load_splits(source)
 train = dd["train"]
+images, labels = train["image"], train["label"]
 for label, name in [(1, "with-signal"), (0, "without-signal")]:
-    imgs = [r["image"] for r in train if r["label"] == label][:n]
+    imgs = [img for img, lab in zip(images, labels) if lab == label][:n]
     if not imgs:
         continue
     w, h = imgs[0].size

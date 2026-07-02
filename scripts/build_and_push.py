@@ -20,7 +20,11 @@ from collections import Counter
 
 import requests
 
-from satnogs_signal.shared.satnogs_api import iter_observations, Observation
+from satnogs_signal.shared.satnogs_api import (
+    FetchPolicy,
+    iter_observations,
+    parse_observation,
+)
 from satnogs_signal.data.build_dataset import (
     build_records,
     to_dataset_dict,
@@ -62,7 +66,9 @@ def collect(norad: int, name: str) -> list:
         cache_file = os.path.join(CACHE_DIR, f"{norad}_{status}.json")
         if os.path.exists(cache_file):
             with open(cache_file, encoding="utf-8") as f:
-                got = [Observation(**d) for d in json.load(f)]
+                # parse_observation ignores unknown keys, so caches written before a
+                # schema change still reload cleanly.
+                got = [parse_observation(d) for d in json.load(f)]
             print(
                 f"  cached {len(got):>4} {status:<14} for {name} ({norad})",
                 file=sys.stderr,
@@ -74,14 +80,16 @@ def collect(norad: int, name: str) -> list:
                     waterfall_status=status,
                     session=session,
                     max_pages=pages,
-                    token=TOKEN,
-                    request_interval=THROTTLE,
-                    max_retries=8,
-                    backoff_base=2.0,
+                    policy=FetchPolicy(
+                        token=TOKEN,
+                        request_interval=THROTTLE,
+                        max_retries=8,
+                        backoff_base=2.0,
+                    ),
                 )
             )[:CAP]
             os.makedirs(CACHE_DIR, exist_ok=True)
-            with open(cache_file, "w") as f:
+            with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump([dataclasses.asdict(o) for o in got], f)
             print(
                 f"  listed {len(got):>4} {status:<14} for {name} ({norad})",
@@ -92,6 +100,8 @@ def collect(norad: int, name: str) -> list:
 
 
 def choose_heldout_stations(train_records: list, frac: float = 0.20) -> set:
+    """Pick the smallest stations totalling ~frac of train records to hold out for the
+    station-generalization test, never holding out every station."""
     counts = Counter(r["station"] for r in train_records)
     target = frac * len(train_records)
     held, covered = set(), 0
@@ -106,6 +116,7 @@ def choose_heldout_stations(train_records: list, frac: float = 0.20) -> set:
 
 
 def main() -> None:
+    """List gold observations, build records, split, save the DatasetDict, and optionally push."""
     if not TOKEN:
         print(
             "WARNING: no satnogs_network_api_key in env — listing will be rate-limited.",

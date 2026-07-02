@@ -4,39 +4,54 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import Callable, Iterator, Optional
 
-if TYPE_CHECKING:
-    import requests
+import requests
 
 BASE_URL = "https://network.satnogs.org/api"
 
 
 @dataclass(frozen=True)
 class Observation:
+    """One SatNOGS Network observation — the subset of API fields the pipeline reads."""
+
     id: int
     norad_cat_id: Optional[int]
     transmitter_mode: Optional[str]
     ground_station: Optional[int]
-    station_name: Optional[str]
     start: Optional[str]
     waterfall: Optional[str]
     waterfall_status: Optional[str]
-    status: Optional[str]
 
 
 def parse_observation(d: dict) -> Observation:
+    """Build an ``Observation`` from a raw API dict, ignoring any extra keys."""
     return Observation(
         id=d["id"],
         norad_cat_id=d.get("norad_cat_id"),
         transmitter_mode=d.get("transmitter_mode"),
         ground_station=d.get("ground_station"),
-        station_name=d.get("station_name"),
         start=d.get("start"),
         waterfall=d.get("waterfall"),
         waterfall_status=d.get("waterfall_status"),
-        status=d.get("status"),
     )
+
+
+@dataclass(frozen=True)
+class FetchPolicy:
+    """Auth, throttle, and retry/backoff behavior for polite SatNOGS API paging.
+
+    ``token`` authenticates (higher rate limit); ``request_interval`` pauses that
+    many seconds before each page fetch (proactive throttling); the remaining
+    fields govern retry/backoff after a retryable status (see ``_get_with_backoff``).
+    """
+
+    token: Optional[str] = None
+    request_interval: float = 0.0
+    max_retries: int = 5
+    backoff_base: float = 1.0
+    sleep: Callable[[float], None] = time.sleep
+    max_retry_after: float = 1800.0
 
 
 WATERFALL_STATUS_FILTER = {"without-signal": 0, "with-signal": 1}
@@ -56,26 +71,22 @@ def _retry_after_seconds(resp, default: float, cap: float) -> float:
 
 
 def _get_with_backoff(
-    session,
-    url,
-    params,
-    max_retries,
-    backoff_base,
-    sleep,
-    headers=None,
-    max_retry_after: float = 1800.0,
-) -> "requests.Response":
-    if max_retries < 1:
+    session, url, params, headers, policy: FetchPolicy
+) -> requests.Response:
+    """GET ``url`` with retry/backoff on retryable statuses, per ``policy``."""
+    if policy.max_retries < 1:
         raise ValueError("max_retries must be >= 1")
-    for attempt in range(max_retries):
+    for attempt in range(policy.max_retries):
         resp = session.get(url, params=params, headers=headers, timeout=30)
         if resp.status_code == 200:
             return resp
-        if resp.status_code in _RETRY_STATUS and attempt < max_retries - 1:
+        if resp.status_code in _RETRY_STATUS and attempt < policy.max_retries - 1:
             wait = _retry_after_seconds(
-                resp, default=backoff_base * (2**attempt), cap=max_retry_after
+                resp,
+                default=policy.backoff_base * (2**attempt),
+                cap=policy.max_retry_after,
             )
-            sleep(wait)
+            policy.sleep(wait)
             continue
         resp.raise_for_status()
         return resp
@@ -86,28 +97,20 @@ def iter_observations(
     *,
     norad_cat_id: Optional[int] = None,
     waterfall_status: Optional[str] = None,
-    session=None,
+    session: Optional[requests.Session] = None,
     max_pages: Optional[int] = None,
-    max_retries: int = 5,
-    backoff_base: float = 1.0,
-    sleep=time.sleep,
-    token: Optional[str] = None,
-    request_interval: float = 0.0,
+    policy: FetchPolicy = FetchPolicy(),
 ) -> Iterator[Observation]:
     """Yield gold/any observations, following cursor pagination politely.
 
-    Pass ``token`` to authenticate (sends ``Authorization: Token <token>``); the
-    SatNOGS Network API grants authenticated callers a higher rate limit. Pass
-    ``request_interval`` to pause that many seconds before each page fetch
-    (proactive throttling), so we stay under the limit instead of only backing
-    off after a 429.
+    ``policy`` (a :class:`FetchPolicy`) carries the auth token, throttle interval,
+    and retry/backoff settings — authenticated callers get a higher rate limit and
+    proactive throttling keeps us under it instead of only backing off after a 429.
     """
     if session is None:
-        import requests
-
         session = requests.Session()
 
-    headers = {"Authorization": f"Token {token}"} if token else None
+    headers = {"Authorization": f"Token {policy.token}"} if policy.token else None
 
     params: dict[str, object] | None = {"format": "json"}
     if norad_cat_id is not None:
@@ -118,11 +121,9 @@ def iter_observations(
     url = f"{BASE_URL}/observations/"
     pages = 0
     while url:
-        if request_interval:
-            sleep(request_interval)
-        resp = _get_with_backoff(
-            session, url, params, max_retries, backoff_base, sleep, headers
-        )
+        if policy.request_interval:
+            policy.sleep(policy.request_interval)
+        resp = _get_with_backoff(session, url, params, headers, policy)
         params = None  # 'next' Link is an absolute URL carrying its own cursor
         for item in resp.json():
             yield parse_observation(item)

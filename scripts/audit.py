@@ -16,7 +16,7 @@ import sys
 
 import requests
 
-from satnogs_signal.shared.satnogs_api import iter_observations
+from satnogs_signal.shared.satnogs_api import FetchPolicy, iter_observations
 from satnogs_signal.data.audit import tally_candidates
 
 PAGES = int(sys.argv[1]) if len(sys.argv) > 1 else 12  # 25 obs per page
@@ -30,27 +30,25 @@ TOKEN = (
 )
 
 
-def main() -> None:
-    """Sample gold observations, tally candidates, and print the ranked table."""
-    session = requests.Session()
+def _sample(session) -> list:
+    """Sample gold observations of both classes from the network (authenticated + throttled)."""
+    policy = FetchPolicy(
+        token=TOKEN, request_interval=THROTTLE_S, max_retries=8, backoff_base=2.0
+    )
     sampled = []
     for status in ("with-signal", "without-signal"):
         n = 0
         for obs in iter_observations(
-            waterfall_status=status,
-            session=session,
-            max_pages=PAGES,
-            token=TOKEN,
-            request_interval=THROTTLE_S,
-            max_retries=8,
-            backoff_base=2.0,
+            waterfall_status=status, session=session, max_pages=PAGES, policy=policy
         ):
             sampled.append(obs)
             n += 1
         print(f"  sampled {n} {status} observations", file=sys.stderr)
+    return sampled
 
-    tally = tally_candidates(sampled)
 
+def _fetch_names(session) -> dict:
+    """Look up satellite names by NORAD id (best-effort; empty dict on failure)."""
     names = {}
     try:
         r = session.get(
@@ -58,8 +56,17 @@ def main() -> None:
         )
         for s in r.json():
             names[s.get("norad_cat_id")] = s.get("name")
-    except Exception as e:  # pragma: no cover
+    except (requests.RequestException, ValueError) as e:  # pragma: no cover
         print(f"  (satellite-name lookup failed: {e})", file=sys.stderr)
+    return names
+
+
+def main() -> None:
+    """Sample gold observations, tally candidates, and print the ranked table."""
+    session = requests.Session()
+    sampled = _sample(session)
+    tally = tally_candidates(sampled)
+    names = _fetch_names(session)
 
     # Rank by the smaller of the two class counts (we need BOTH signal and no-signal).
     ranked = sorted(

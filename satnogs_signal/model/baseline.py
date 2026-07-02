@@ -11,6 +11,7 @@ from PIL import Image
 
 
 def signal_score(img: Image.Image, center_frac: float = 0.25) -> float:
+    """Score one waterfall by the ratio of central-column brightness to the rest."""
     a = np.asarray(img.convert("L"), dtype=float)
     w = a.shape[1]
     c0 = int(w * (0.5 - center_frac / 2))
@@ -22,4 +23,5 @@ def signal_score(img: Image.Image, center_frac: float = 0.25) -> float:
 
 
 def score_images(images, center_frac: float = 0.25) -> list:
+    """Apply signal_score to each image and return the list of scores."""
     return [signal_score(im, center_frac) for im in images]
