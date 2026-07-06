@@ -28,8 +28,9 @@ This is the one I'd bet on:
 ## Results (v1)
 
 A compact **ResNet-18** fine-tuned on gold human waterfall vettings, evaluated on a
-**leakage-safe held-out test set** — *unseen ground stations **and** an entirely unseen
-satellite* (436 observations):
+**held-out test set** (436 observations) that combines two axes held out of training: an
+**entirely unseen satellite** (FrontierSat, never trained on) and a set of **held-out ground
+stations** whose noise/RFI fingerprint is kept out of training:
 
 | Metric | **Model** | Classical baseline |
 |--------|-----------|--------------------|
@@ -51,8 +52,11 @@ satellite* (436 observations):
 - 📊 Dataset — [`ryroeu/satnogs-signal-waterfalls`](https://huggingface.co/datasets/ryroeu/satnogs-signal-waterfalls)
 
 *Trained on 4 narrowband FSK/GFSK telemetry satellites (OTP-2, CUBEBEL-2, AEPEX, CatSat) with
-FrontierSat held out. Caveat: gold labels skew toward clearer passes than the unvetted firehose,
-so real-world performance on faint signals will be lower than these numbers.*
+FrontierSat held out. Two caveats: (1) the unseen-satellite slice is held out by satellite, so
+some of its passes come from stations that also appear in training — that slice measures
+cross-satellite generalization, not fully station-unseen performance; (2) gold labels skew toward
+clearer passes than the unvetted firehose, so real-world performance on faint signals will be
+lower than these numbers.*
 
 ### Expected accuracy on live data
 
