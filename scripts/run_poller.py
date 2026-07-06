@@ -8,7 +8,7 @@ import sys
 
 import requests
 
-from satnogs_signal.model.train import load_scorer
+from satnogs_signal.model.inference import load_scorer
 from satnogs_signal.service import store, poller
 
 MODEL = "ryroeu/satnogs-signal-classifier"

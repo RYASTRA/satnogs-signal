@@ -82,18 +82,15 @@ observations the model had not previously scored.*
 
 ## Running it (Docker — no virtualenv)
 
-Everything runs in a container; there's no local Python environment to manage.
+Everything runs in a container; there's no local Python environment to manage. The model is
+pre-trained and loaded from the Hub
+([`ryroeu/satnogs-signal-classifier`](https://huggingface.co/ryroeu/satnogs-signal-classifier)).
 
 ```bash
-docker compose build                                    # build the image (installs deps)
-docker compose run --rm app python scripts/audit.py     # audit candidate satellites
-docker compose run --rm app python scripts/build_and_push.py 120   # build the dataset
-docker compose run --rm app python scripts/train_and_eval.py _dataset_build   # train + eval
+docker compose build   # build the image (installs runtime deps)
 ```
 
 API tokens go in a gitignored `.env` (copy `.env.example`); compose loads it automatically.
-Note: Docker on macOS can't reach Apple's MPS GPU, so in-container training is CPU-only
-(fine for this model size).
 
 ### The triage service (read-only)
 

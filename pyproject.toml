@@ -6,14 +6,10 @@ requires-python = ">=3.10"
 dependencies = [
     "requests>=2.31",
     "Pillow>=10.0",
-    "datasets>=2.18",
-    "huggingface_hub>=0.23",
     "numpy>=1.24",
     "torch>=2.2",
     "torchvision>=0.17",
-    "transformers>=4.40",
-    "accelerate>=1.1.0",
-    "scikit-learn>=1.4",
+    "transformers==5.12.1",
     "gradio>=4.0",
 ]
 
@@ -30,4 +26,4 @@ include = ["satnogs_signal*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-m 'not slow'"
-markers = ["slow: model training / network tests, deselect with -m 'not slow'"]
+markers = ["slow: network / live-model-load tests, deselect with -m 'not slow'"]

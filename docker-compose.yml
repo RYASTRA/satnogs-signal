@@ -1,18 +1,14 @@
 # Run everything through the container — no host virtualenv.
 #   docker compose build
-#   docker compose run --rm app pytest -q
-#   docker compose run --rm app python scripts/audit.py
-#   docker compose run --rm app python scripts/build_and_push.py 120
-#   docker compose run --rm app python scripts/train_and_eval.py _dataset_build
-# Note: Docker on macOS has no access to Apple MPS, so training in-container is CPU-only
-# (fine for ResNet-18 on this dataset).
+#   docker compose run --rm app python scripts/run_poller.py     # score unvetted obs -> triage.db
+#   docker compose run --rm --service-ports app python app.py    # serve the dashboard
 services:
   app:
     build: .
     image: satnogs-signal
     working_dir: /app
     volumes:
-      - .:/app          # live code + read/write _dataset_build/ and _model/ on the host
+      - .:/app          # live code + read/write triage.db on the host
     ports:
       - "7860:7860"   # Gradio dashboard (docker compose run --rm --service-ports app python app.py)
     env_file:
