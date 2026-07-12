@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 # the editable install resolves to the live code without rebuilding.
 COPY pyproject.toml ./
 COPY satnogs_signal ./satnogs_signal
+# scripts too: deployments that build this image straight from git (no bind
+# mount) run /app/scripts/run_poller.py — the image must carry its own tools.
+COPY scripts ./scripts
 RUN pip install --no-cache-dir -e .
 
 CMD ["python", "-c", "import satnogs_signal; print('satnogs-signal container ready (no venv)')"]
