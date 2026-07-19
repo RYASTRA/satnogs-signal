@@ -9,7 +9,7 @@ dependencies = [
     "numpy>=1.24",
     "torch>=2.2",
     "torchvision>=0.17",
-    "transformers==5.12.1",
+    "transformers==5.14.1",
     "gradio>=4.0",
 ]
 
