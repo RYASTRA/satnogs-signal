@@ -25,6 +25,21 @@ This is the one I'd bet on:
   the auto-vetting they pulled. The only existing attempt is an independent CNN
   proof-of-concept — a baseline to beat, not a solved problem.
 
+## The SatNOGS fleet
+
+Four small, honest tools around a SatNOGS observation — three single-purpose engines, plus one app
+that composes them for a human reviewer:
+
+| repo | the question it answers |
+|---|---|
+| **satnogs-signal** (this repo) | ***is there a signal in this waterfall?*** — signal-vs-noise triage |
+| [satnogs-decoder](https://github.com/RYSATNOGS/satnogs-decoder) | *what does the frame say?* — telemetry decoding |
+| [satnogs-id](https://github.com/RYSATNOGS/satnogs-id) | *which catalog object is it?* — Doppler identification |
+| [satnogs-dashboard](https://github.com/RYSATNOGS/satnogs-dashboard) | *review it all on one observation* — the workbench that runs the three engines |
+
+The three engines are standalone and read-only against SatNOGS; the dashboard is the surface that
+composes them. This repo is the **detect** stage — a waterfall in, a signal/noise call out.
+
 ## Results (v1)
 
 A compact **ResNet-18** fine-tuned on gold human waterfall vettings, evaluated on a
